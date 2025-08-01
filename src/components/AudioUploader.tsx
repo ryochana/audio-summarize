@@ -1,5 +1,4 @@
 import React, { useRef } from 'react'
-import './AudioUploader.css'
 
 interface AudioUploaderProps {
   onFileUpload: (file: File) => void
