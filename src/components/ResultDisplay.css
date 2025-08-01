@@ -1,0 +1,130 @@
+.result-display {
+  margin-top: 2rem;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  overflow: hidden;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.result-header {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e9ecef;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.result-header h2 {
+  margin: 0;
+  color: #333;
+  font-size: 1.3rem;
+}
+
+.result-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.action-button {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.action-button:hover {
+  background: #0056b3;
+  transform: translateY(-1px);
+}
+
+.copy-button.copied {
+  background: #28a745;
+}
+
+.download-button {
+  background: #6c757d;
+}
+
+.download-button:hover {
+  background: #545b62;
+}
+
+.result-content {
+  padding: 0;
+}
+
+.result-box {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 1.5rem;
+  line-height: 1.6;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.result-box p {
+  margin: 0 0 1rem 0;
+  color: #333;
+  text-align: left;
+}
+
+.result-box p:last-child {
+  margin-bottom: 0;
+}
+
+.result-info {
+  background: #f8f9fa;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e9ecef;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.result-info p {
+  margin: 0;
+}
+
+/* Custom scrollbar for result box */
+.result-box::-webkit-scrollbar {
+  width: 6px;
+}
+
+.result-box::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.result-box::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.result-box::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+@media (max-width: 768px) {
+  .result-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .result-actions {
+    justify-content: center;
+  }
+  
+  .action-button {
+    flex: 1;
+    justify-content: center;
+  }
+}

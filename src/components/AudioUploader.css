@@ -1,0 +1,103 @@
+.audio-uploader {
+  margin-bottom: 2rem;
+}
+
+.upload-area {
+  border: 2px dashed #ddd;
+  border-radius: 12px;
+  padding: 3rem 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: #fafafa;
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.upload-area:hover {
+  border-color: #007bff;
+  background: #f0f8ff;
+}
+
+.upload-area.has-file {
+  border-color: #28a745;
+  background: #f8fff8;
+}
+
+.upload-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.upload-icon {
+  font-size: 3rem;
+  opacity: 0.6;
+}
+
+.upload-prompt h2 {
+  margin: 0;
+  color: #333;
+  font-size: 1.5rem;
+}
+
+.upload-prompt p {
+  margin: 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.upload-button {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.upload-button:hover {
+  background: #0056b3;
+}
+
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.file-icon {
+  font-size: 3rem;
+}
+
+.file-details h3 {
+  margin: 0 0 0.5rem 0;
+  color: #333;
+}
+
+.file-details p {
+  margin: 0.25rem 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.change-file-button {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 0.5rem 1.5rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  margin-top: 1rem;
+  transition: background 0.3s ease;
+}
+
+.change-file-button:hover {
+  background: #545b62;
+}
