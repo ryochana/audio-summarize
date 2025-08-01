@@ -3,7 +3,9 @@ import './App.css'
 import AudioUploader from './components/AudioUploader'
 import ProcessingOptions from './components/ProcessingOptions'
 import ResultDisplay from './components/ResultDisplay'
+import ProcessingProgress from './components/ProcessingProgress'
 import { googleAIService } from './services/googleAI'
+import type { ProcessingProgress as ProcessingProgressType } from './services/googleAI'
 
 function App() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
@@ -11,11 +13,18 @@ function App() {
   const [result, setResult] = useState<string>('')
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string>('')
+  const [progress, setProgress] = useState<ProcessingProgressType>({
+    step: '',
+    progress: 0,
+    details: '',
+    logs: []
+  })
 
   const handleFileUpload = (file: File) => {
     setUploadedFile(file)
     setResult('')
     setError('')
+    setProgress({ step: '', progress: 0, details: '', logs: [] })
   }
 
   const handleProcessingTypeSelect = (type: 'transcribe' | 'summarize') => {
@@ -28,9 +37,17 @@ function App() {
 
     setIsProcessing(true)
     setError('')
+    setResult('')
+    
+    // Set up progress callback
+    googleAIService.setProgressCallback((progressData) => {
+      setProgress(prev => ({
+        ...progressData,
+        logs: [...prev.logs, ...progressData.logs]
+      }))
+    })
     
     try {
-      // Process with Google AI
       console.log(`เริ่ม${processingType === 'transcribe' ? 'ถอดข้อความ' : 'สรุป'}...`)
       
       const aiResult = processingType === 'transcribe' 
@@ -82,6 +99,14 @@ function App() {
               isProcessing={isProcessing}
             />
           )}
+
+          <ProcessingProgress
+            step={progress.step}
+            progress={progress.progress}
+            details={progress.details}
+            logs={progress.logs}
+            isVisible={isProcessing || progress.step === 'Complete' || progress.step === 'Error'}
+          />
 
           {error && (
             <div className="error-message">
