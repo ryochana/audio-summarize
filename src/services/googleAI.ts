@@ -25,9 +25,31 @@ export interface ProcessingProgress {
 }
 
 export class GoogleAIService {
-  private model = genAI.getGenerativeModel({ model: MODEL_VERSION as any })
+  private primaryModel = genAI.getGenerativeModel({ model: MODEL_VERSION as any })
+  private fallbackModel = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' }) // Fallback
   private progressCallback?: (progress: ProcessingProgress) => void
   private currentLogs: string[] = []
+
+  private async callAI(prompt: any[], type: 'transcribe' | 'summarize'): Promise<any> {
+    try {
+      // ลองใช้ Primary Model ก่อน
+      this.updateProgress('Processing', 60, 
+        type === 'transcribe' ? 'กำลังถอดข้อความ...' : 'กำลังสรุปเนื้อหา...', 
+        `🤖 ใช้ ${MODEL_VERSION} model`)
+      
+      return await this.primaryModel.generateContent(prompt)
+    } catch (error: any) {
+      if (error.message?.includes('429') || error.message?.includes('quota')) {
+        // หากโควต้าหมด ใช้ Fallback Model
+        this.updateProgress('Processing', 65, 
+          'โควต้าหมด เปลี่ยนเป็น Flash model...', 
+          '🔄 เปลี่ยนเป็น gemini-1.5-flash (ฟรี 15 req/min)')
+        
+        return await this.fallbackModel.generateContent(prompt)
+      }
+      throw error // ถ้าเป็น error อื่น ให้ throw ต่อ
+    }
+  }
 
   setProgressCallback(callback: (progress: ProcessingProgress) => void) {
     this.progressCallback = callback
@@ -114,7 +136,7 @@ export class GoogleAIService {
       // Simulate detailed progress
       await this.simulateDetailedProgress('transcribe')
       
-      const result = await this.model.generateContent([
+      const result = await this.callAI([
         {
           inlineData: {
             data: audioData,
@@ -122,7 +144,7 @@ export class GoogleAIService {
           }
         },
         'กรุณาถอดข้อความจากไฟล์เสียงนี้ให้ครบถ้วนและถูกต้อง โดยใช้ภาษาไทยหากเป็นเสียงภาษาไทย หรือภาษาอังกฤษหากเป็นเสียงภาษาอังกฤษ'
-      ])
+      ], 'transcribe')
 
       // Step 5: Process result
       this.updateProgress('Finalizing', 85, 'ประมวลผลผลลัพธ์...', '📝 ได้รับผลลัพธ์จาก AI แล้ว กำลังจัดรูปแบบข้อความ')
@@ -212,7 +234,7 @@ export class GoogleAIService {
         [ข้อสรุปหลัก]
       `
 
-      const result = await this.model.generateContent([
+      const result = await this.callAI([
         prompt,
         {
           inlineData: {
@@ -220,7 +242,7 @@ export class GoogleAIService {
             mimeType: mimeType
           }
         }
-      ])
+      ], 'summarize')
 
       // Step 5: Process result
       this.updateProgress('Finalizing', 85, 'ประมวลผลผลลัพธ์...', '📝 ได้รับผลลัพธ์จาก AI แล้ว กำลังจัดรูปแบบการสรุป')

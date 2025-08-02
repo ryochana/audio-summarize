@@ -55,6 +55,9 @@ function App() {
         : await googleAIService.summarizeAudio(uploadedFile)
 
       if (!aiResult.success) {
+        if (aiResult.error?.includes('429') || aiResult.error?.includes('quota')) {
+          throw new Error('📊 โควต้าของ AI model หมดแล้ว\n\n💡 ลองใหม่ในอีก 1-2 นาที หรือเปลี่ยน model ใน .env:\nVITE_AI_MODEL=gemini-1.5-flash')
+        }
         if (aiResult.error?.includes('API key')) {
           throw new Error('กรุณาตั้งค่า Google AI Studio API Key\n\nรอบนี้ API Key ถูกตั้งค่าอัตโนมัติใน Environment Variables แล้ว\nหากยังขึ้น error นี้ให้ contact admin')
         }
