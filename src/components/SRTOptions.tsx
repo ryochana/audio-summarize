@@ -4,14 +4,12 @@ import './SRTOptions.css'
 interface SRTOptionsProps {
   onTypeSelect: (type: 'transcribe' | 'summarize' | 'srt') => void
   selectedType: 'transcribe' | 'summarize' | 'srt' | null
-  onProcess: (srtLanguage?: 'original' | 'thai') => void
   isProcessing: boolean
 }
 
 const SRTOptions: React.FC<SRTOptionsProps> = ({
   onTypeSelect,
   selectedType,
-  onProcess,
   isProcessing
 }) => {
   const [srtLanguage, setSrtLanguage] = useState<'original' | 'thai'>('original')

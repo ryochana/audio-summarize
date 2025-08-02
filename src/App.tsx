@@ -209,7 +209,6 @@ function App() {
               <SRTOptions
                 selectedType={processingType}
                 onTypeSelect={handleTypeChange}
-                onProcess={handleProcess}
                 isProcessing={isProcessing}
               />
             </div>
