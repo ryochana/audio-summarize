@@ -20,19 +20,6 @@ export class SRTService {
     return this.aiInstances[Math.floor(Math.random() * this.aiInstances.length)]
   }
 
-  private async fileToBase64(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => {
-        const result = reader.result as string
-        const base64 = result.split(',')[1]
-        resolve(base64)
-      }
-      reader.onerror = reject
-      reader.readAsDataURL(file)
-    })
-  }
-
   private formatTimeCode(seconds: number): string {
     const hours = Math.floor(seconds / 3600)
     const minutes = Math.floor((seconds % 3600) / 60)
@@ -143,8 +130,13 @@ export class SRTService {
     try {
       // Use the existing transcribe function which already works
       console.log(`🎬 [SRT] Calling transcribe service...`)
-      const transcription = await googleAI.transcribeAudio(audioFile)
+      const result = await googleAI.transcribeAudio(audioFile)
       
+      if (!result.success || !result.data) {
+        throw new Error(result.error || 'Failed to transcribe audio')
+      }
+      
+      const transcription = result.data
       console.log(`🎬 [SRT] Transcription completed: ${transcription.length} characters`)
       console.log(`🎬 [SRT] Transcription preview: "${transcription.substring(0, 200)}..."`)
       
@@ -160,7 +152,8 @@ export class SRTService {
             `แปลข้อความต่อไปนี้เป็นภาษาไทยที่เข้าใจง่าย ให้แปลความหมายให้ถูกต้อง:\n\n${transcription}`
           ])
           
-          finalText = translateResult.response.text()
+          const translatedText = translateResult.response.text()
+          finalText = translatedText
           console.log(`🎬 [SRT] Translation completed: ${finalText.length} characters`)
         } catch (translateError) {
           console.warn(`🎬 [SRT] Translation failed, using original transcription`)
