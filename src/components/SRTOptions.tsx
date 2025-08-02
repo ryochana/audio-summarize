@@ -16,19 +16,6 @@ const SRTOptions: React.FC<SRTOptionsProps> = ({
 }) => {
   const [srtLanguage, setSrtLanguage] = useState<'original' | 'thai'>('original')
 
-  const handleProcess = () => {
-    console.log(`🎬 [SRTOptions] handleProcess called`)
-    console.log(`🎬 [SRTOptions] selectedType: ${selectedType}`)
-    
-    if (selectedType === 'srt') {
-      console.log(`🎬 [SRTOptions] Processing SRT with language: ${srtLanguage}`)
-      onProcess(srtLanguage)
-    } else {
-      console.log(`🎬 [SRTOptions] Processing ${selectedType}`)
-      onProcess()
-    }
-  }
-
   return (
     <div className="processing-options">
       <h2>เลือกประเภทการประมวลผล</h2>
