@@ -287,7 +287,7 @@ Important: Please provide only the transcribed text from the audio, do not say y
     // Ensure proper SRT format
     let cleanContent = srtContent.trim()
     if (!cleanContent.includes('-->')) {
-      console.warn(`⚠️ [SRTService] Content does not appear to be valid SRT format`)
+      console.warn(`⚠️ [SRTService] Content doesn't appear to be valid SRT format`)
     }
     
     const element = document.createElement('a')
