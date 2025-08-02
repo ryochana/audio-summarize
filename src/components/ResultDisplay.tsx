@@ -83,9 +83,38 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({
       
       <div className="result-content">
         <div className="result-box">
-          {result.split('\n').map((line, index) => (
-            <p key={index}>{line || '\u00A0'}</p>
-          ))}
+          {processingType === 'srt' ? (
+            // Special formatting for SRT content
+            <div className="srt-content">
+              <div className="srt-preview">
+                {result.split('\n\n').map((subtitle, index) => {
+                  const lines = subtitle.trim().split('\n')
+                  if (lines.length >= 3) {
+                    const number = lines[0]
+                    const timestamp = lines[1]
+                    const text = lines.slice(2).join('\n')
+                    return (
+                      <div key={index} className="srt-subtitle">
+                        <div className="srt-number">{number}</div>
+                        <div className="srt-timestamp">{timestamp}</div>
+                        <div className="srt-text">{text}</div>
+                      </div>
+                    )
+                  }
+                  return null
+                })}
+              </div>
+              <div className="srt-raw">
+                <h4>📄 เนื้อหา SRT (คัดลอกไปบันทึกเป็น .srt)</h4>
+                <pre className="srt-raw-content">{result}</pre>
+              </div>
+            </div>
+          ) : (
+            // Normal text formatting for transcribe/summarize
+            result.split('\n').map((line, index) => (
+              <p key={index}>{line || '\u00A0'}</p>
+            ))
+          )}
         </div>
       </div>
       
@@ -94,8 +123,17 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({
           ประเภท: {processingType === 'transcribe' && 'การถอดข้อความ'}
                   {processingType === 'summarize' && 'การสรุปโดยละเอียด'}
                   {processingType === 'srt' && 'การสร้างซับไตเติ้ล SRT'} | 
-          ความยาว: {result.length} ตัวอักษร | 
+          {processingType === 'srt' ? (
+            <>จำนวนซับ: {result.split('\n\n').filter(s => s.trim()).length} ซับ</>
+          ) : (
+            <>ความยาว: {result.length} ตัวอักษร</>
+          )} | 
           เวลา: {new Date().toLocaleString('th-TH')}
+          {processingType === 'srt' && (
+            <span style={{ display: 'block', marginTop: '0.5rem', fontSize: '0.9rem', color: '#6b7280' }}>
+              💡 คัดลอกเนื้อหาด้านล่างแล้วบันทึกเป็นไฟล์ .srt เพื่อใช้กับโปรแกรมเล่นวิดีโอ
+            </span>
+          )}
         </p>
       </div>
     </div>
