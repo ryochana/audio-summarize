@@ -48,7 +48,7 @@ const AudioUploader: React.FC<AudioUploaderProps> = ({ onFileUpload, uploadedFil
   }
 
   return (
-    <div className="audio-uploader">
+    <div className="audio-uploader modern-card">
       <div 
         className={`upload-area ${uploadedFile ? 'has-file' : ''}`}
         onDrop={handleDrop}

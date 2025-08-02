@@ -43,65 +43,91 @@ export class SRTService {
   }
 
   private parseTranscriptionToSRT(transcription: string): string {
-    // Smart sentence splitting
-    const sentences = transcription
-      .split(/[.!?]\s+|[\n\r]+/)
+    console.log(`🎬 [SRT] Parsing transcription to SRT format...`)
+    console.log(`🎬 [SRT] Original transcription length: ${transcription.length} characters`)
+    
+    // Clean and normalize transcription
+    let cleanText = transcription
+      .replace(/[\r\n]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+    
+    console.log(`🎬 [SRT] Cleaned transcription: ${cleanText.substring(0, 100)}...`)
+    
+    // Smart sentence splitting with better punctuation handling
+    const sentences = cleanText
+      .split(/(?<=[.!?])\s+|(?<=।)\s+|(?<=၊)\s+/)
       .filter(sentence => sentence.trim().length > 0)
       .map(sentence => sentence.trim())
+    
+    console.log(`🎬 [SRT] Split into ${sentences.length} sentences`)
 
     let srtContent = ''
     let index = 1
-    const averageDuration = 3 // seconds per subtitle
-    const maxCharsPerSubtitle = 80
+    const averageDuration = 4 // Increase to 4 seconds per subtitle for better readability
+    const maxCharsPerSubtitle = 70 // Reduce for better mobile viewing
 
     for (let i = 0; i < sentences.length; i++) {
       let currentText = sentences[i]
       
-      // Split long sentences
+      // Skip very short fragments
+      if (currentText.length < 3) continue
+      
+      // Split long sentences into chunks
       if (currentText.length > maxCharsPerSubtitle) {
         const words = currentText.split(' ')
         let chunk = ''
         
         for (const word of words) {
-          if ((chunk + ' ' + word).length > maxCharsPerSubtitle) {
-            if (chunk) {
-              const startTime = (index - 1) * averageDuration
-              const endTime = startTime + averageDuration
-              
-              srtContent += `${index}\n`
-              srtContent += `${this.formatTimeCode(startTime)} --> ${this.formatTimeCode(endTime)}\n`
-              srtContent += `${chunk.trim()}\n\n`
-              index++
-              chunk = word
-            } else {
-              chunk = word
-            }
+          const testChunk = chunk ? `${chunk} ${word}` : word
+          
+          if (testChunk.length > maxCharsPerSubtitle && chunk) {
+            // Add this chunk as a subtitle
+            const startTime = (index - 1) * averageDuration
+            const endTime = startTime + averageDuration
+            
+            srtContent += `${index}\n`
+            srtContent += `${this.formatTimeCode(startTime)} --> ${this.formatTimeCode(endTime)}\n`
+            srtContent += `${chunk.trim()}\n\n`
+            
+            console.log(`🎬 [SRT] Added subtitle ${index}: "${chunk.trim()}"`)
+            index++
+            chunk = word
           } else {
-            chunk = chunk ? chunk + ' ' + word : word
+            chunk = testChunk
           }
         }
         
-        if (chunk) {
+        // Add remaining chunk
+        if (chunk && chunk.trim().length > 0) {
           const startTime = (index - 1) * averageDuration
           const endTime = startTime + averageDuration
           
           srtContent += `${index}\n`
           srtContent += `${this.formatTimeCode(startTime)} --> ${this.formatTimeCode(endTime)}\n`
           srtContent += `${chunk.trim()}\n\n`
+          
+          console.log(`🎬 [SRT] Added subtitle ${index}: "${chunk.trim()}"`)
           index++
         }
       } else {
+        // Add normal sentence
         const startTime = (index - 1) * averageDuration
         const endTime = startTime + averageDuration
         
         srtContent += `${index}\n`
         srtContent += `${this.formatTimeCode(startTime)} --> ${this.formatTimeCode(endTime)}\n`
         srtContent += `${currentText}\n\n`
+        
+        console.log(`🎬 [SRT] Added subtitle ${index}: "${currentText}"`)
         index++
       }
     }
 
-    return srtContent
+    console.log(`🎬 [SRT] Generated ${index - 1} subtitle entries`)
+    console.log(`🎬 [SRT] Final SRT length: ${srtContent.length} characters`)
+    
+    return srtContent.trim()
   }
 
   async generateSRT(audioFile: File, language: 'original' | 'thai' = 'original'): Promise<string> {
@@ -170,9 +196,20 @@ export class SRTService {
     const srtContent = this.parseTranscriptionToSRT(transcription)
     const srtProcessingTime = Date.now() - srtStartTime
     
-    const subtitleCount = srtContent.split('\n\n').filter(s => s.trim()).length
+    // Validate SRT format
+    const subtitleCount = srtContent.split(/\n\d+\n/).length - 1
+    const hasTimeStamps = srtContent.includes('-->')
+    
     console.log(`🎬 [SRT] SRT conversion completed in ${srtProcessingTime}ms`)
     console.log(`🎬 [SRT] Generated ${subtitleCount} subtitle entries`)
+    console.log(`🎬 [SRT] Has timestamps: ${hasTimeStamps}`)
+    console.log(`🎬 [SRT] Sample SRT content:`)
+    console.log(srtContent.substring(0, 300))
+    
+    if (!hasTimeStamps || subtitleCount === 0) {
+      console.error(`🎬 [SRT] Invalid SRT format generated`)
+      throw new Error('ไม่สามารถสร้างไฟล์ SRT ที่ถูกต้องได้')
+    }
     console.log(`🎬 [SRT] Total processing time: ${Date.now() - startTime}ms`)
 
     return srtContent
@@ -181,14 +218,31 @@ export class SRTService {
   downloadSRT(srtContent: string, filename: string) {
     console.log(`💾 [SRTService] Downloading SRT file: ${filename}.srt`)
     console.log(`💾 [SRTService] Content length: ${srtContent.length} characters`)
+    console.log(`💾 [SRTService] Content preview:`, srtContent.substring(0, 200))
+    
+    // Ensure proper SRT format
+    let cleanContent = srtContent.trim()
+    if (!cleanContent.includes('-->')) {
+      console.warn(`⚠️ [SRTService] Content doesn't appear to be valid SRT format`)
+    }
     
     const element = document.createElement('a')
-    const file = new Blob([srtContent], { type: 'application/x-subrip' })
+    // Use proper MIME type for SRT files
+    const file = new Blob([cleanContent], { 
+      type: 'text/plain; charset=utf-8' 
+    })
     element.href = URL.createObjectURL(file)
-    element.download = `${filename}.srt`  // Remove timestamp for cleaner filename
+    element.download = `${filename}.srt`
+    element.style.display = 'none'
+    
     document.body.appendChild(element)
     element.click()
-    document.body.removeChild(element)
+    
+    // Clean up
+    setTimeout(() => {
+      document.body.removeChild(element)
+      URL.revokeObjectURL(element.href)
+    }, 100)
     
     console.log(`💾 [SRTService] SRT file download initiated successfully`)
   }

@@ -29,7 +29,7 @@ const SRTOptions: React.FC<SRTOptionsProps> = ({
   }
 
   return (
-    <div className="processing-options">
+    <div className="processing-options modern-card">
       <h2>เลือกประเภทการประมวลผล</h2>
       
       <div className="option-grid">

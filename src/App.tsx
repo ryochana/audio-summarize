@@ -3,7 +3,6 @@ import AudioUploader from './components/AudioUploader'
 import SRTOptions from './components/SRTOptions'
 import ProcessingProgress from './components/ProcessingProgress'
 import ResultDisplay from './components/ResultDisplay'
-import { PerformanceStats } from './components/PerformanceStats'
 import { googleAI } from './services/googleAI-enhanced'
 import { srtService } from './services/srtService'
 import type { ProcessingProgress as ProcessingProgressType } from './services/googleAI-enhanced'
@@ -16,7 +15,6 @@ function App() {
   const [progress, setProgress] = useState<ProcessingProgressType | null>(null)
   const [result, setResult] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [showStats, setShowStats] = useState(false)
   const [srtContent, setSrtContent] = useState<string | null>(null)
 
   const handleFileSelect = (file: File) => {
@@ -141,54 +139,35 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="app">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <span className="text-white text-xl">🎵</span>
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Audio Summarizer</h1>
-                <p className="text-sm text-gray-600">🎯 Manual Process Mode | ⚡ Enhanced Performance</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-sm text-gray-500">เลือกไฟล์และกดปุ่มเพื่อประมวลผล</div>
-              <div className="text-xs text-blue-600 font-medium">Multi-API Load Balancing</div>
-            </div>
-          </div>
-        </div>
+      <header className="app-header">
+        <h1>🎵 ผลการสร้างซับไตเติ้ล</h1>
+        <p>⚡ Manual Process Mode | 🎯 Enhanced AI Processing</p>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 py-8">
-        <div className="space-y-8">
+      <main className="app-main">
+        <div className="container">
           {/* File Upload */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <AudioUploader 
-              onFileUpload={handleFileSelect} 
-              uploadedFile={audioFile}
-            />
-          </div>
+          <AudioUploader 
+            onFileUpload={handleFileSelect} 
+            uploadedFile={audioFile}
+          />
 
           {/* Processing Options */}
           {audioFile && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <SRTOptions
-                selectedType={processingType}
-                onTypeSelect={setProcessingType}
-                onProcess={handleProcess}
-                isProcessing={isProcessing}
-              />
-            </div>
+            <SRTOptions
+              selectedType={processingType}
+              onTypeSelect={setProcessingType}
+              onProcess={handleProcess}
+              isProcessing={isProcessing}
+            />
           )}
 
           {/* Progress */}
           {isProcessing && progress && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="modern-card">
               <ProcessingProgress 
                 step={progress.step}
                 progress={progress.progress}
@@ -201,7 +180,7 @@ function App() {
 
           {/* Results */}
           {result && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="modern-card">
               <ResultDisplay
                 result={result}
                 processingType={processingType}
@@ -210,10 +189,14 @@ function App() {
               
               {/* SRT Download Button */}
               {processingType === 'srt' && srtContent && (
-                <div className="mt-4 text-center">
+                <div style={{ marginTop: '2rem', textAlign: 'center' }}>
                   <button
                     onClick={handleDownloadSRT}
-                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 mx-auto"
+                    className="process-button"
+                    style={{
+                      background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                      boxShadow: '0 15px 35px rgba(34, 197, 94, 0.3)'
+                    }}
                   >
                     💾 ดาวน์โหลด SRT ไฟล์
                   </button>
@@ -224,46 +207,44 @@ function App() {
 
           {/* Error Display */}
           {error && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="text-center">
-                <div className="text-red-500 text-lg mb-4">❌ เกิดข้อผิดพลาด</div>
-                <div className="text-red-600 mb-4 p-4 bg-red-50 rounded-lg">
+            <div className="modern-card" style={{ 
+              borderLeft: '4px solid #ef4444',
+              background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.05) 0%, rgba(220, 38, 38, 0.05) 100%)'
+            }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ 
+                  fontSize: '1.5rem', 
+                  marginBottom: '1rem',
+                  color: '#ef4444',
+                  fontWeight: '700'
+                }}>
+                  ❌ เกิดข้อผิดพลาด
+                </div>
+                <div style={{ 
+                  color: '#dc2626', 
+                  marginBottom: '1.5rem', 
+                  padding: '1rem', 
+                  background: 'rgba(239, 68, 68, 0.1)', 
+                  borderRadius: '12px',
+                  lineHeight: '1.6'
+                }}>
                   {error}
                 </div>
                 <button
                   onClick={handleReset}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors"
+                  className="process-button"
+                  style={{
+                    background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                    boxShadow: '0 15px 35px rgba(59, 130, 246, 0.3)'
+                  }}
                 >
-                  ลองใหม่อีกครั้ง
+                  � ลองใหม่อีกครั้ง
                 </button>
               </div>
             </div>
           )}
         </div>
       </main>
-
-      {/* Performance Stats */}
-      <PerformanceStats
-        isVisible={showStats}
-        onToggle={() => setShowStats(!showStats)}
-      />
-
-      {/* Footer */}
-      <footer className="mt-16 bg-gray-50 border-t border-gray-200">
-        <div className="max-w-4xl mx-auto px-4 py-8">
-          <div className="text-center">
-            <div className="text-sm text-gray-600 mb-2">
-              🚀 Enhanced Performance Features
-            </div>
-            <div className="flex justify-center space-x-6 text-xs text-gray-500">
-              <span>⚡ Multi-API Load Balancing</span>
-              <span>🔄 Smart API Selection</span>
-              <span>📊 Parallel Processing</span>
-              <span>� SRT Subtitle Generation</span>
-            </div>
-          </div>
-        </div>
-      </footer>
     </div>
   )
 }
