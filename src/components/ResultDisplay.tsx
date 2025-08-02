@@ -3,7 +3,7 @@ import './ResultDisplay.css'
 
 interface ResultDisplayProps {
   result: string
-  processingType: 'transcribe' | 'summarize' | null
+  processingType: 'transcribe' | 'summarize' | 'srt' | null
   onReset?: () => void
 }
 
@@ -28,7 +28,19 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({
     const element = document.createElement('a')
     const file = new Blob([result], { type: 'text/plain' })
     element.href = URL.createObjectURL(file)
-    element.download = `${processingType === 'transcribe' ? 'transcription' : 'summary'}_${new Date().getTime()}.txt`
+    
+    let filename = ''
+    if (processingType === 'transcribe') {
+      filename = `transcription_${new Date().getTime()}.txt`
+    } else if (processingType === 'summarize') {
+      filename = `summary_${new Date().getTime()}.txt`
+    } else if (processingType === 'srt') {
+      filename = `subtitle_${new Date().getTime()}.txt`
+    } else {
+      filename = `result_${new Date().getTime()}.txt`
+    }
+    
+    element.download = filename
     document.body.appendChild(element)
     element.click()
     document.body.removeChild(element)
@@ -38,7 +50,9 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({
     <div className="result-display">
       <div className="result-header">
         <h2>
-          {processingType === 'transcribe' ? '📝 ผลการถอดข้อความ' : '📋 ผลการสรุป'}
+          {processingType === 'transcribe' && '📝 ผลการถอดข้อความ'}
+          {processingType === 'summarize' && '📋 ผลการสรุป'}
+          {processingType === 'srt' && '🎬 ผลการสร้างซับไตเติ้ล'}
         </h2>
         <div className="result-actions">
           <button 
@@ -77,7 +91,9 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({
       
       <div className="result-info">
         <p>
-          ประเภท: {processingType === 'transcribe' ? 'การถอดข้อความ' : 'การสรุปโดยละเอียด'} | 
+          ประเภท: {processingType === 'transcribe' && 'การถอดข้อความ'}
+                  {processingType === 'summarize' && 'การสรุปโดยละเอียด'}
+                  {processingType === 'srt' && 'การสร้างซับไตเติ้ล SRT'} | 
           ความยาว: {result.length} ตัวอักษร | 
           เวลา: {new Date().toLocaleString('th-TH')}
         </p>
