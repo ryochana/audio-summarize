@@ -134,11 +134,7 @@ export class SRTService {
     console.log(`🎬 [SRT] Starting SRT generation for ${audioFile.name}`)
     console.log(`🎬 [SRT] File size: ${(audioFile.size / 1024 / 1024).toFixed(2)}MB, Language: ${language}`)
     
-    const selectedAI = this.getRandomAI()
-    const model = selectedAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
-    
-    console.log(`🎬 [SRT] Selected AI instance, using model: gemini-1.5-flash`)
-    
+    console.log(`🎬 [SRT] Converting file to base64...`)
     const startTime = Date.now()
     const base64Audio = await this.fileToBase64(audioFile)
     console.log(`🎬 [SRT] File converted to base64 in ${Date.now() - startTime}ms`)
@@ -146,69 +142,137 @@ export class SRTService {
     let prompt: string
     
     if (language === 'thai') {
-      prompt = `กรุณาถอดข้อความจากไฟล์เสียงนี้และแปลเป็นภาษาไทย โดย:
-1. ถอดข้อความให้ถูกต้องและครบถ้วน
-2. แปลเป็นภาษาไทยที่เข้าใจง่าย
-3. แบ่งประโยคให้สั้นกระชับ เหมาะสำหรับซับไตเติ้ล
-4. ไม่ต้องใส่คำว่า "ส่วนที่" หรือหมายเลขส่วน
-5. ตัดประโยคยาวออกเป็นประโยคสั้นๆ
-6. ถ้ามีหลายคนพูดให้พยายามแยกคำพูดของแต่ละคน`
+      prompt = `ถอดข้อความจากไฟล์เสียงนี้และแปลเป็นภาษาไทยให้ฉันหน่อย:
+
+ให้ทำตามขั้นตอนนี้:
+1. ฟังไฟล์เสียงอย่างระวัง
+2. ถอดข้อความทุกคำที่ได้ยิน
+3. แปลเป็นภาษาไทยที่เข้าใจง่าย
+4. แบ่งเป็นประโยคสั้นๆ สำหรับซับไตเติ้ล
+5. ใช้คำพูดง่ายๆ ไม่ซับซ้อน
+
+สำคัญ: กรุณาให้เฉพาะข้อความที่ถอดได้จากเสียงเท่านั้น ไม่ต้องบอกว่าไม่สามารถทำได้`
       console.log(`🎬 [SRT] Using Thai translation prompt`)
     } else {
-      prompt = `กรุณาถอดข้อความจากไฟล์เสียงนี้ โดย:
-1. ใช้ภาษาต้นฉบับที่ได้ยิน
-2. ถอดข้อความให้ถูกต้องและครบถ้วน
-3. แบ่งประโยคให้สั้นกระชับ เหมาะสำหรับซับไตเติ้ล
-4. ไม่ต้องใส่คำว่า "ส่วนที่" หรือหมายเลขส่วน
-5. ตัดประโยคยาวออกเป็นประโยคสั้นๆ
-6. ถ้ามีหลายคนพูดให้พยายามแยกคำพูดของแต่ละคน`
+      prompt = `Please transcribe this audio file for me:
+
+Follow these steps:
+1. Listen to the audio carefully
+2. Transcribe every word you can hear
+3. Use the original language from the audio
+4. Break into short sentences suitable for subtitles
+5. Keep the language natural and easy to read
+
+Important: Please provide only the transcribed text from the audio, do not say you cannot do it.`
       console.log(`🎬 [SRT] Using original language prompt`)
-    }
+    }`
 
     console.log(`🎬 [SRT] Sending request to AI...`)
     const aiStartTime = Date.now()
     
-    const result = await model.generateContent([
-      prompt,
-      {
-        inlineData: {
-          data: base64Audio,
-          mimeType: audioFile.type || 'audio/mpeg'
+    let transcription = ''
+    let attempts = 0
+    const maxAttempts = 3
+    
+    while (attempts < maxAttempts) {
+      attempts++
+      console.log(`🎬 [SRT] Attempt ${attempts}/${maxAttempts}`)
+      
+      try {
+        const selectedAI = this.getRandomAI()
+        const model = selectedAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+        
+        const result = await model.generateContent([
+          prompt,
+          {
+            inlineData: {
+              data: base64Audio,
+              mimeType: audioFile.type || 'audio/mpeg'
+            }
+          }
+        ])
+
+        transcription = result.response.text()
+        console.log(`🎬 [SRT] Received response: ${transcription.length} characters`)
+        
+        // Check for error responses
+        const errorKeywords = [
+          'ไม่สามารถถอดเสียงได้',
+          'ไม่สามารถสรุปไฟล์เสียงได้',
+          'ไม่มีความสามารถในการประมวลผลเสียง',
+          'ขออภัย ฉันไม่สามารถ',
+          'I cannot transcribe',
+          'I am unable to process',
+          'I cannot process audio',
+          'Sorry, I cannot'
+        ]
+        
+        const hasError = errorKeywords.some(keyword => 
+          transcription.toLowerCase().includes(keyword.toLowerCase())
+        )
+        
+        if (hasError || transcription.trim().length < 10) {
+          console.warn(`🎬 [SRT] Attempt ${attempts} failed - AI error response`)
+          console.warn(`🎬 [SRT] Response: "${transcription.substring(0, 100)}..."`)
+          
+          if (attempts < maxAttempts) {
+            console.log(`🎬 [SRT] Retrying with different AI instance...`)
+            await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1 second
+            continue
+          } else {
+            throw new Error(`AI ไม่สามารถประมวลผลไฟล์เสียงได้หลังจากลอง ${maxAttempts} ครั้ง: ${transcription.substring(0, 100)}...`)
+          }
         }
+        
+        // Success - break out of retry loop
+        break
+        
+      } catch (error) {
+        console.error(`🎬 [SRT] Attempt ${attempts} failed:`, error)
+        if (attempts >= maxAttempts) {
+          throw error
+        }
+        await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1 second before retry
       }
-    ])
+    }
 
     const aiProcessingTime = Date.now() - aiStartTime
-    console.log(`🎬 [SRT] AI processing completed in ${aiProcessingTime}ms`)
-
-    const transcription = result.response.text()
-    console.log(`🎬 [SRT] Transcription received: ${transcription.length} characters`)
-    
-    // Check for error responses
-    if (transcription.includes('ไม่สามารถสรุปไฟล์เสียงได้') || 
-        transcription.includes('ไม่มีความสามารถในการประมวลผลเสียง')) {
-      console.error(`🎬 [SRT] Error: AI cannot process audio file`)
-      throw new Error('ไม่สามารถประมวลผลไฟล์เสียงเป็นซับไตเติ้ลได้')
-    }
+    console.log(`🎬 [SRT] AI processing completed in ${aiProcessingTime}ms after ${attempts} attempts`)
+    console.log(`🎬 [SRT] Final transcription: ${transcription.length} characters`)
+    console.log(`🎬 [SRT] Transcription preview: "${transcription.substring(0, 200)}..."`)
 
     console.log(`🎬 [SRT] Converting transcription to SRT format...`)
     const srtStartTime = Date.now()
     const srtContent = this.parseTranscriptionToSRT(transcription)
     const srtProcessingTime = Date.now() - srtStartTime
     
-    // Validate SRT format
+    // Validate SRT format - more strict validation
     const subtitleCount = srtContent.split(/\n\d+\n/).length - 1
     const hasTimeStamps = srtContent.includes('-->')
+    const hasValidSubtitles = subtitleCount > 0
+    
+    // Check if content contains error messages
+    const containsErrorMessage = [
+      'ขออภัย',
+      'ไม่สามารถ',
+      'Sorry',
+      'cannot',
+      'unable'
+    ].some(keyword => srtContent.toLowerCase().includes(keyword.toLowerCase()))
     
     console.log(`🎬 [SRT] SRT conversion completed in ${srtProcessingTime}ms`)
     console.log(`🎬 [SRT] Generated ${subtitleCount} subtitle entries`)
     console.log(`🎬 [SRT] Has timestamps: ${hasTimeStamps}`)
+    console.log(`🎬 [SRT] Contains error message: ${containsErrorMessage}`)
     console.log(`🎬 [SRT] Sample SRT content:`)
     console.log(srtContent.substring(0, 300))
     
-    if (!hasTimeStamps || subtitleCount === 0) {
+    if (!hasTimeStamps || !hasValidSubtitles || containsErrorMessage) {
       console.error(`🎬 [SRT] Invalid SRT format generated`)
-      throw new Error('ไม่สามารถสร้างไฟล์ SRT ที่ถูกต้องได้')
+      console.error(`🎬 [SRT] hasTimeStamps: ${hasTimeStamps}`)
+      console.error(`🎬 [SRT] hasValidSubtitles: ${hasValidSubtitles}`)
+      console.error(`🎬 [SRT] containsErrorMessage: ${containsErrorMessage}`)
+      throw new Error('ไม่สามารถสร้างไฟล์ SRT ที่ถูกต้องได้ - เนื้อหาไม่ใช่ข้อความที่ถอดจากเสียง')
     }
     console.log(`🎬 [SRT] Total processing time: ${Date.now() - startTime}ms`)
 
