@@ -55,6 +55,15 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({
           >
             💾 ดาวน์โหลด
           </button>
+          {onReset && (
+            <button 
+              className="action-button reset-button"
+              onClick={onReset}
+              title="ประมวลผลใหม่"
+            >
+              🔄 ประมวลผลใหม่
+            </button>
+          )}
         </div>
       </div>
       
