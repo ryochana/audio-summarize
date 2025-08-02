@@ -4,15 +4,29 @@ import './SRTOptions.css'
 interface SRTOptionsProps {
   onTypeSelect: (type: 'transcribe' | 'summarize' | 'srt') => void
   selectedType: 'transcribe' | 'summarize' | 'srt' | null
+  onProcess: (srtLanguage?: 'original' | 'thai') => void
   isProcessing: boolean
 }
 
 const SRTOptions: React.FC<SRTOptionsProps> = ({
   onTypeSelect,
   selectedType,
+  onProcess,
   isProcessing
 }) => {
   const [srtLanguage, setSrtLanguage] = useState<'original' | 'thai'>('original')
+
+  const handleProcess = () => {
+    console.log(`🚀 [SRTOptions] Manual process triggered`)
+    console.log(`🚀 [SRTOptions] Processing type: ${selectedType}`)
+    console.log(`🚀 [SRTOptions] SRT Language: ${srtLanguage}`)
+    
+    if (selectedType === 'srt') {
+      onProcess(srtLanguage)
+    } else {
+      onProcess()
+    }
+  }
 
   return (
     <div className="processing-options">
@@ -88,17 +102,39 @@ const SRTOptions: React.FC<SRTOptionsProps> = ({
         </div>
       )}
 
-      {/* Auto-Process Mode - No manual button needed */}
+      {/* Process Button */}
       {selectedType && (
         <div className="process-section">
-          <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <div className="text-blue-700 font-medium mb-1">
-              🚀 โหมดประมวlผลอัตโนมัติ
-            </div>
-            <div className="text-sm text-blue-600">
-              อัปโหลดไฟล์เสียงแล้วจะเริ่มประมวลผลทันที
-            </div>
-          </div>
+          <button
+            className="process-button"
+            onClick={handleProcess}
+            disabled={isProcessing}
+            style={{
+              background: isProcessing ? '#6b7280' : selectedType === 'transcribe' ? '#059669' : selectedType === 'summarize' ? '#0ea5e9' : '#dc2626',
+              color: 'white',
+              padding: '12px 24px',
+              borderRadius: '8px',
+              border: 'none',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              cursor: isProcessing ? 'not-allowed' : 'pointer',
+              width: '100%',
+              marginTop: '16px'
+            }}
+          >
+            {isProcessing ? (
+              <>
+                <span style={{ marginRight: '8px' }}>⏳</span>
+                กำลังประมวลผล...
+              </>
+            ) : (
+              <>
+                {selectedType === 'transcribe' && '📝 เริ่มถอดข้อความ'}
+                {selectedType === 'summarize' && '📋 เริ่มสรุปเนื้อหา'}
+                {selectedType === 'srt' && `🎬 สร้างซับ ${srtLanguage === 'thai' ? '(แปลไทย)' : '(ภาษาต้นฉบับ)'}`}
+              </>
+            )}
+          </button>
         </div>
       )}
     </div>

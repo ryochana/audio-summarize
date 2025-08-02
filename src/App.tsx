@@ -29,35 +29,6 @@ function App() {
     setError(null)
     setProgress(null)
     setSrtContent(null)
-    
-    // Auto-start processing after file selection
-    console.log(`🚀 [APP] Auto-starting ${processingType} processing...`)
-    startAutoProcess(file)
-  }
-
-  const startAutoProcess = (file: File) => {
-    setTimeout(() => {
-      if (file) {
-        handleProcess(processingType === 'srt' ? 'original' : undefined)
-      }
-    }, 800) // Increased delay for better UX
-  }
-
-  const handleTypeChange = (type: 'transcribe' | 'summarize' | 'srt') => {
-    console.log(`🎯 [APP] Processing type changed to: ${type}`)
-    setProcessingType(type)
-    
-    // Auto-reprocess with new type if file exists
-    if (audioFile && !isProcessing) {
-      console.log(`🔄 [APP] Auto-reprocessing with new type: ${type}`)
-      setResult(null)
-      setError(null)
-      setSrtContent(null)
-      
-      setTimeout(() => {
-        handleProcess(type === 'srt' ? 'original' : undefined)
-      }, 300)
-    }
   }
 
   const handleProcess = async (srtLanguage?: 'original' | 'thai') => {
@@ -66,11 +37,12 @@ function App() {
       return
     }
 
-    console.log(`🚀 [APP] Starting ${processingType} processing for: ${audioFile.name}`)
-    console.log(`🚀 [APP] Processing type: ${processingType}`)
-    console.log(`🚀 [APP] Processing started at: ${new Date().toLocaleString('th-TH')}`)
+    console.log(`🚀 [APP] === PROCESSING STARTED ===`)
+    console.log(`🚀 [APP] File: ${audioFile.name}`)
+    console.log(`🚀 [APP] Type: ${processingType}`)
+    console.log(`🚀 [APP] Time: ${new Date().toLocaleString('th-TH')}`)
     if (srtLanguage) {
-      console.log(`🚀 [APP] SRT language: ${srtLanguage}`)
+      console.log(`🚀 [APP] SRT Language: ${srtLanguage}`)
     }
 
     setIsProcessing(true)
@@ -81,47 +53,47 @@ function App() {
 
     try {
       if (processingType === 'srt') {
-        console.log(`🎬 [APP] Starting SRT generation...`)
-        // SRT Generation
+        console.log(`📊 [APP] Progress: 0% - เริ่มต้นการสร้าง SRT`)
+        setProgress({ step: 'Starting', progress: 0, details: 'เริ่มต้นการสร้าง SRT...', logs: [], percentage: 0, message: 'เริ่มต้นการสร้าง SRT...' })
+        
+        console.log(`📊 [APP] Progress: 10% - เตรียมไฟล์เสียง`)
+        setProgress({ step: 'Preparing', progress: 10, details: 'เตรียมไฟล์เสียงสำหรับประมวลผล...', logs: [], percentage: 10, message: 'เตรียมไฟล์เสียงสำหรับประมวลผล...' })
+        
         const srtResult = await srtService.generateSRT(audioFile, srtLanguage || 'original')
         
+        console.log(`📊 [APP] Progress: 90% - สร้าง SRT สำเร็จ`)
+        setProgress({ step: 'Finalizing', progress: 90, details: 'กำลังจัดรูปแบบ SRT...', logs: [], percentage: 90, message: 'กำลังจัดรูปแบบ SRT...' })
+        
         const subtitleCount = srtResult.split('\n\n').filter(s => s.trim()).length
-        console.log(`🎬 [APP] SRT generation completed successfully`)
-        console.log(`🎬 [APP] Generated ${subtitleCount} subtitle blocks`)
+        console.log(`✅ [APP] Progress: 100% - เสร็จสิ้น`)
+        console.log(`✅ [APP] Generated ${subtitleCount} subtitle blocks`)
         
         setSrtContent(srtResult)
-        setResult(`SRT ซับไตเติ้ลสำเร็จ!\n\nจำนวนซับ: ${subtitleCount} บรรทัด\nภาษา: ${srtLanguage === 'thai' ? 'ไทย (แปล)' : 'ต้นฉบับ'}\n\nไฟล์ SRT จะดาวน์โหลดอัตโนมัติ`)
-        
-        // Auto-download SRT file
-        setTimeout(() => {
-          if (audioFile && srtResult) {
-            console.log(`💾 [APP] Auto-downloading SRT file...`)
-            const filename = audioFile.name.split('.')[0]
-            srtService.downloadSRT(srtResult, filename)
-          }
-        }, 1500) // Short delay to show result first
+        setResult(`SRT ซับไตเติ้ลสำเร็จ!\n\nจำนวนซับ: ${subtitleCount} บรรทัด\nภาษา: ${srtLanguage === 'thai' ? 'ไทย (แปล)' : 'ต้นฉบับ'}\n\nคลิกปุ่ม "💾 ดาวน์โหลด SRT" เพื่อบันทึกไฟล์`)
       } else {
-        console.log(`🔄 [APP] Starting ${processingType} with Google AI service...`)
-        // Regular transcription/summarization
-        // Set up progress callback
+        console.log(`� [APP] Progress: 0% - เริ่มต้น${processingType}`)
+        setProgress({ step: 'Starting', progress: 0, details: `เริ่มต้น${processingType}...`, logs: [], percentage: 0, message: `เริ่มต้น${processingType}...` })
+        
+        // Set up progress callback with detailed logging
         googleAI.setProgressCallback((progressData) => {
-          console.log('🔄 [APP] Progress update: ' + progressData.percentage + '% - ' + progressData.message)
+          console.log(`� [APP] Progress: ${progressData.percentage}% - ${progressData.message}`)
+          console.log(`📊 [APP] Step: ${progressData.step} | Details: ${progressData.details}`)
           setProgress(progressData)
         })
 
         let processingResult
         
         if (processingType === 'transcribe') {
-          console.log(`📝 [APP] Calling transcribeAudio()...`)
+          console.log(`📝 [APP] Starting transcription...`)
           processingResult = await googleAI.transcribeAudio(audioFile)
         } else {
-          console.log(`📋 [APP] Calling summarizeAudio()...`)
+          console.log(`📋 [APP] Starting summarization...`)
           processingResult = await googleAI.summarizeAudio(audioFile)
         }
 
         if (processingResult.success && processingResult.data) {
           console.log(`✅ [APP] ${processingType} completed successfully`)
-          console.log(`✅ [APP] Result data length: ${JSON.stringify(processingResult.data).length} characters`)
+          console.log(`✅ [APP] Result length: ${JSON.stringify(processingResult.data).length} characters`)
           setResult(processingResult.data)
         } else {
           console.error(`❌ [APP] ${processingType} failed:`, processingResult.error)
@@ -131,11 +103,10 @@ function App() {
     } catch (err: any) {
       console.error(`💥 [APP] Processing error:`, err)
       console.error(`💥 [APP] Error message: ${err.message}`)
-      console.error(`💥 [APP] Error stack:`, err.stack)
       setError(err.message || 'เกิดข้อผิดพลาดในการประมวลผล')
     } finally {
-      console.log(`🏁 [APP] Processing ended at: ${new Date().toLocaleString('th-TH')}`)
-      console.log(`🏁 [APP] Final processing state: ${isProcessing ? 'STILL PROCESSING' : 'COMPLETED'}`)
+      console.log(`🏁 [APP] === PROCESSING COMPLETED ===`)
+      console.log(`🏁 [APP] End time: ${new Date().toLocaleString('th-TH')}`)
       setIsProcessing(false)
     }
   }
@@ -181,11 +152,11 @@ function App() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Audio Summarizer</h1>
-                <p className="text-sm text-gray-600">🚀 Auto-Process Mode | ⚡ Enhanced Performance</p>
+                <p className="text-sm text-gray-600">🎯 Manual Process Mode | ⚡ Enhanced Performance</p>
               </div>
             </div>
             <div className="text-right">
-              <div className="text-sm text-gray-500">อัปโหลดไฟล์เสียงแล้วประมวลผลทันที</div>
+              <div className="text-sm text-gray-500">เลือกไฟล์และกดปุ่มเพื่อประมวลผล</div>
               <div className="text-xs text-blue-600 font-medium">Multi-API Load Balancing</div>
             </div>
           </div>
@@ -208,7 +179,8 @@ function App() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <SRTOptions
                 selectedType={processingType}
-                onTypeSelect={handleTypeChange}
+                onTypeSelect={setProcessingType}
+                onProcess={handleProcess}
                 isProcessing={isProcessing}
               />
             </div>
