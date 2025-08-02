@@ -4,9 +4,14 @@ import './ResultDisplay.css'
 interface ResultDisplayProps {
   result: string
   processingType: 'transcribe' | 'summarize' | null
+  onReset?: () => void
 }
 
-const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, processingType }) => {
+const ResultDisplay: React.FC<ResultDisplayProps> = ({ 
+  result, 
+  processingType, 
+  onReset
+}) => {
   const [copied, setCopied] = useState(false)
 
   const handleCopy = async () => {

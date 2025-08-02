@@ -104,9 +104,9 @@ function App() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <ProcessingOptions
                 selectedType={processingType}
-                onTypeChange={setProcessingType}
+                onTypeSelect={setProcessingType}
                 onProcess={handleProcess}
-                disabled={isProcessing}
+                isProcessing={isProcessing}
               />
             </div>
           )}
@@ -114,19 +114,42 @@ function App() {
           {/* Progress */}
           {isProcessing && progress && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <ProcessingProgress progress={progress} />
+              <ProcessingProgress 
+                step={progress.step}
+                progress={progress.progress}
+                details={progress.details}
+                logs={progress.logs}
+                isVisible={true}
+              />
             </div>
           )}
 
           {/* Results */}
-          {(result || error) && (
+          {result && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <ResultDisplay
                 result={result}
-                error={error}
-                onReset={handleReset}
                 processingType={processingType}
+                onReset={handleReset}
               />
+            </div>
+          )}
+
+          {/* Error Display */}
+          {error && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="text-center">
+                <div className="text-red-500 text-lg mb-4">❌ เกิดข้อผิดพลาด</div>
+                <div className="text-red-600 mb-4 p-4 bg-red-50 rounded-lg">
+                  {error}
+                </div>
+                <button
+                  onClick={handleReset}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors"
+                >
+                  ลองใหม่อีกครั้ง
+                </button>
+              </div>
             </div>
           )}
         </div>
