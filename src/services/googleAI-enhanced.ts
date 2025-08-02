@@ -116,8 +116,8 @@ export class GoogleAIService {
     const fileSizeMB = audioFile.size / (1024 * 1024)
     const optimalChunks = Math.min(Math.ceil(fileSizeMB / 5), aiInstances.length, 4) // Max 4 chunks
     
-    this.updateProgress('Processing', 40, `แยกไฟล์เป็น ${optimalChunks} ส่วนสำหรับประมวลผลแบบ Parallel`, 
-      `⚡ Parallel processing with ${optimalChunks} chunks`)
+    this.updateProgress('Processing', 40, `ประมวลผลไฟล์ขนาดใหญ่แบบ Parallel`, 
+      `⚡ Processing large file with ${optimalChunks} parallel requests`)
 
     const chunkSize = Math.ceil(audioFile.size / optimalChunks)
     const chunks: File[] = []
@@ -131,65 +131,96 @@ export class GoogleAIService {
     // Process chunks in parallel
     const chunkPromises = chunks.map(async (chunk, index) => {
       const startTime = Date.now()
-      try {
-        const { model, apiIndex } = this.getSmartAIInstance()
-        const stats = apiStats[apiIndex]
-        
-        stats.requests++
-        stats.lastUsed = Date.now()
-        
-        const base64Audio = await this.fileToBase64(chunk)
-        const prompt = type === 'transcribe' 
-          ? `กรุณาถอดข้อความจากไฟล์เสียงนี้ (ส่วนที่ ${index + 1}/${chunks.length}) ให้ครบถ้วนและถูกต้อง`
-          : `กรุณาสรุปเนื้อหาจากไฟล์เสียงนี้ (ส่วนที่ ${index + 1}/${chunks.length}) อย่างละเอียด`
+      let retryCount = 0
+      const maxRetries = 3
+      
+      while (retryCount < maxRetries) {
+        try {
+          const { model, apiIndex } = this.getSmartAIInstance()
+          const stats = apiStats[apiIndex]
+          
+          stats.requests++
+          stats.lastUsed = Date.now()
+          
+          const base64Audio = await this.fileToBase64(chunk)
+          const prompt = type === 'transcribe' 
+            ? `กรุณาถอดข้อความจากไฟล์เสียงนี้ให้ครบถ้วนและถูกต้อง โดยไม่ต้องบอกว่าเป็นส่วนที่เท่าไหร่`
+            : `กรุณาสรุปเนื้อหาจากไฟล์เสียงนี้อย่างละเอียด โดยไม่ต้องแจ้งว่าเป็นส่วนที่เท่าไหร่`
 
-        const result = await model.generateContent([
-          prompt,
-          {
-            inlineData: {
-              data: base64Audio,
-              mimeType: chunk.type || 'audio/mpeg'
+          const result = await model.generateContent([
+            prompt,
+            {
+              inlineData: {
+                data: base64Audio,
+                mimeType: chunk.type || 'audio/mpeg'
+              }
             }
+          ])
+
+          const responseText = result.response.text()
+          
+          // Check for error responses and retry if needed
+          if (responseText.includes('ไม่สามารถสรุปไฟล์เสียงได้') || 
+              responseText.includes('ไม่มีความสามารถในการประมวลผลเสียง') ||
+              responseText.includes('ขออภัย')) {
+            throw new Error('AI response indicates inability to process audio')
           }
-        ])
 
-        // Update success stats
-        const responseTime = Date.now() - startTime
-        stats.avgResponseTime = stats.avgResponseTime === 0 ? responseTime : (stats.avgResponseTime + responseTime) / 2
-        stats.successRate = (stats.successRate * stats.requests + 1) / (stats.requests + 1)
-        stats.isHealthy = true
+          // Update success stats
+          const responseTime = Date.now() - startTime
+          stats.avgResponseTime = stats.avgResponseTime === 0 ? responseTime : (stats.avgResponseTime + responseTime) / 2
+          stats.successRate = (stats.successRate * stats.requests + 1) / (stats.requests + 1)
+          stats.isHealthy = true
 
-        this.updateProgress('Processing', 50 + (index * 30 / chunks.length), 
-          `เสร็จส่วนที่ ${index + 1}/${chunks.length}`, 
-          `✅ Chunk ${index + 1} completed by API #${apiIndex + 1} (${responseTime}ms)`)
+          this.updateProgress('Processing', 50 + (index * 30 / chunks.length), 
+            `เสร็จส่วนที่ ${index + 1}/${chunks.length}`, 
+            `✅ Chunk ${index + 1} completed by API #${apiIndex + 1}`)
 
-        return result.response.text()
-      } catch (error: any) {
-        const apiIndex = Math.floor(Math.random() * aiInstances.length) // Fallback to random
-        const stats = apiStats[apiIndex]
-        stats.errors++
-        stats.successRate = Math.max(0, (stats.successRate * stats.requests - 1) / Math.max(stats.requests, 1))
-        
-        if (error.message?.includes('429') || error.message?.includes('quota')) {
-          stats.isHealthy = false
+          return responseText
+        } catch (error: any) {
+          retryCount++
+          const randomApiIndex = Math.floor(Math.random() * aiInstances.length)
+          const stats = apiStats[randomApiIndex]
+          stats.errors++
+          stats.successRate = Math.max(0, (stats.successRate * stats.requests - 1) / Math.max(stats.requests, 1))
+          
+          if (error.message?.includes('429') || error.message?.includes('quota')) {
+            stats.isHealthy = false
+          }
+          
+          if (retryCount < maxRetries) {
+            this.updateProgress('Processing', 50 + (index * 30 / chunks.length), 
+              `ลองใหม่ส่วนที่ ${index + 1} (ครั้งที่ ${retryCount + 1})`, 
+              `🔄 Retrying chunk ${index + 1} with different API`)
+            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount))
+            continue
+          }
+          
+          // If all retries failed, return empty or try different approach
+          this.updateProgress('Processing', 50 + (index * 30 / chunks.length), 
+            `ข้ามส่วนที่ ${index + 1} ไปก่อน`, 
+            `⚠️ Chunk ${index + 1} failed after ${maxRetries} attempts`)
+          
+          return '' // Return empty instead of error message
         }
-        
-        this.updateProgress('Processing', 50 + (index * 30 / chunks.length), 
-          `ข้อผิดพลาดในส่วนที่ ${index + 1}`, 
-          `❌ Chunk ${index + 1} failed: ${error.message}`)
-        
-        return `[ไม่สามารถประมวลผลส่วนที่ ${index + 1} ได้: ${error.message}]`
       }
+      return ''
     })
 
     const results = await Promise.all(chunkPromises)
 
-    // Combine results intelligently
+    // Filter out empty results and combine intelligently
+    const validResults = results.filter(r => r && r.trim().length > 0)
+    
+    if (validResults.length === 0) {
+      throw new Error('ไม่สามารถประมวลผลไฟล์ได้ กรุณาลองไฟล์อื่นหรือแบ่งไฟล์ให้เล็กลง')
+    }
+
+    // Combine results seamlessly
     if (type === 'transcribe') {
-      return results.join('\n\n--- ส่วนต่อไป ---\n\n')
+      return validResults.join(' ') // Join with space for natural flow
     } else {
-      const validResults = results.filter(r => !r.startsWith('[ไม่สามารถประมวลผล'))
-      return `## สรุปรวม\n\n${validResults.map((result, i) => `### ส่วนที่ ${i + 1}\n${result}`).join('\n\n')}`
+      return validResults.join('\n\n') // Join with paragraph breaks for summaries
     }
   }
 

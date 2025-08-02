@@ -1,21 +1,23 @@
 import { useState } from 'react'
 import AudioUploader from './components/AudioUploader'
-import ProcessingOptions from './components/ProcessingOptions'
+import SRTOptions from './components/SRTOptions'
 import ProcessingProgress from './components/ProcessingProgress'
 import ResultDisplay from './components/ResultDisplay'
 import { PerformanceStats } from './components/PerformanceStats'
 import { googleAI } from './services/googleAI-enhanced'
+import { srtService } from './services/srtService'
 import type { ProcessingProgress as ProcessingProgressType } from './services/googleAI-enhanced'
 import './App.css'
 
 function App() {
   const [audioFile, setAudioFile] = useState<File | null>(null)
-  const [processingType, setProcessingType] = useState<'transcribe' | 'summarize'>('transcribe')
+  const [processingType, setProcessingType] = useState<'transcribe' | 'summarize' | 'srt'>('transcribe')
   const [isProcessing, setIsProcessing] = useState(false)
   const [progress, setProgress] = useState<ProcessingProgressType | null>(null)
   const [result, setResult] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [showStats, setShowStats] = useState(false)
+  const [srtContent, setSrtContent] = useState<string | null>(null)
 
   const handleFileSelect = (file: File) => {
     setAudioFile(file)
@@ -24,32 +26,41 @@ function App() {
     setProgress(null)
   }
 
-  const handleProcess = async () => {
+  const handleProcess = async (srtLanguage?: 'original' | 'thai') => {
     if (!audioFile) return
 
     setIsProcessing(true)
     setResult(null)
     setError(null)
     setProgress(null)
-
-    // Set up progress callback
-    googleAI.setProgressCallback((progressData) => {
-      setProgress(progressData)
-    })
+    setSrtContent(null)
 
     try {
-      let processingResult
-      
-      if (processingType === 'transcribe') {
-        processingResult = await googleAI.transcribeAudio(audioFile)
+      if (processingType === 'srt') {
+        // SRT Generation
+        const srtResult = await srtService.generateSRT(audioFile, srtLanguage || 'original')
+        setSrtContent(srtResult)
+        setResult(`SRT ซับไตเติ้ลสำเร็จ!\n\nจำนวนซับ: ${srtResult.split('\n\n').filter(s => s.trim()).length} บรรทัด\nภาษา: ${srtLanguage === 'thai' ? 'ไทย (แปล)' : 'ต้นฉบับ'}\n\nคลิกปุ่ม "💾 ดาวน์โหลด SRT" เพื่อบันทึกไฟล์`)
       } else {
-        processingResult = await googleAI.summarizeAudio(audioFile)
-      }
+        // Regular transcription/summarization
+        // Set up progress callback
+        googleAI.setProgressCallback((progressData) => {
+          setProgress(progressData)
+        })
 
-      if (processingResult.success && processingResult.data) {
-        setResult(processingResult.data)
-      } else {
-        setError(processingResult.error || 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ')
+        let processingResult
+        
+        if (processingType === 'transcribe') {
+          processingResult = await googleAI.transcribeAudio(audioFile)
+        } else {
+          processingResult = await googleAI.summarizeAudio(audioFile)
+        }
+
+        if (processingResult.success && processingResult.data) {
+          setResult(processingResult.data)
+        } else {
+          setError(processingResult.error || 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ')
+        }
       }
     } catch (err: any) {
       setError(err.message || 'เกิดข้อผิดพลาดในการประมวลผล')
@@ -63,6 +74,14 @@ function App() {
     setResult(null)
     setError(null)
     setProgress(null)
+    setSrtContent(null)
+  }
+
+  const handleDownloadSRT = () => {
+    if (srtContent && audioFile) {
+      const filename = audioFile.name.split('.')[0]
+      srtService.downloadSRT(srtContent, filename)
+    }
   }
 
   return (
@@ -102,7 +121,7 @@ function App() {
           {/* Processing Options */}
           {audioFile && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <ProcessingOptions
+              <SRTOptions
                 selectedType={processingType}
                 onTypeSelect={setProcessingType}
                 onProcess={handleProcess}
@@ -132,6 +151,18 @@ function App() {
                 processingType={processingType}
                 onReset={handleReset}
               />
+              
+              {/* SRT Download Button */}
+              {processingType === 'srt' && srtContent && (
+                <div className="mt-4 text-center">
+                  <button
+                    onClick={handleDownloadSRT}
+                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 mx-auto"
+                  >
+                    💾 ดาวน์โหลด SRT ไฟล์
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -172,7 +203,7 @@ function App() {
               <span>⚡ Multi-API Load Balancing</span>
               <span>🔄 Smart API Selection</span>
               <span>📊 Parallel Processing</span>
-              <span>🎯 Auto Fallback</span>
+              <span>� SRT Subtitle Generation</span>
             </div>
           </div>
         </div>
