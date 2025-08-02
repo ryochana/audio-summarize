@@ -1,131 +1,159 @@
 import { useState } from 'react'
-import './App.css'
 import AudioUploader from './components/AudioUploader'
 import ProcessingOptions from './components/ProcessingOptions'
-import ResultDisplay from './components/ResultDisplay'
 import ProcessingProgress from './components/ProcessingProgress'
-import { googleAIService } from './services/googleAI'
-import type { ProcessingProgress as ProcessingProgressType } from './services/googleAI'
+import ResultDisplay from './components/ResultDisplay'
+import { PerformanceStats } from './components/PerformanceStats'
+import { googleAI } from './services/googleAI-enhanced'
+import type { ProcessingProgress as ProcessingProgressType } from './services/googleAI-enhanced'
+import './App.css'
 
 function App() {
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null)
-  const [processingType, setProcessingType] = useState<'transcribe' | 'summarize' | null>(null)
-  const [result, setResult] = useState<string>('')
+  const [audioFile, setAudioFile] = useState<File | null>(null)
+  const [processingType, setProcessingType] = useState<'transcribe' | 'summarize'>('transcribe')
   const [isProcessing, setIsProcessing] = useState(false)
-  const [error, setError] = useState<string>('')
-  const [progress, setProgress] = useState<ProcessingProgressType>({
-    step: '',
-    progress: 0,
-    details: '',
-    logs: []
-  })
+  const [progress, setProgress] = useState<ProcessingProgressType | null>(null)
+  const [result, setResult] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [showStats, setShowStats] = useState(false)
 
-  const handleFileUpload = (file: File) => {
-    setUploadedFile(file)
-    setResult('')
-    setError('')
-    setProgress({ step: '', progress: 0, details: '', logs: [] })
-  }
-
-  const handleProcessingTypeSelect = (type: 'transcribe' | 'summarize') => {
-    setProcessingType(type)
-    setError('')
+  const handleFileSelect = (file: File) => {
+    setAudioFile(file)
+    setResult(null)
+    setError(null)
+    setProgress(null)
   }
 
   const handleProcess = async () => {
-    if (!uploadedFile || !processingType) return
+    if (!audioFile) return
 
     setIsProcessing(true)
-    setError('')
-    setResult('')
-    
-    // Set up progress callback
-    googleAIService.setProgressCallback((progressData) => {
-      setProgress(prev => ({
-        ...progressData,
-        logs: [...prev.logs, ...progressData.logs]
-      }))
-    })
-    
-    try {
-      console.log(`เริ่ม${processingType === 'transcribe' ? 'ถอดข้อความ' : 'สรุป'}...`)
-      
-      const aiResult = processingType === 'transcribe' 
-        ? await googleAIService.transcribeAudio(uploadedFile)
-        : await googleAIService.summarizeAudio(uploadedFile)
+    setResult(null)
+    setError(null)
+    setProgress(null)
 
-      if (!aiResult.success) {
-        if (aiResult.error?.includes('429') || aiResult.error?.includes('quota')) {
-          throw new Error('📊 โควต้าของ AI model หมดแล้ว\n\n💡 ลองใหม่ในอีก 1-2 นาที หรือเปลี่ยน model ใน .env:\nVITE_AI_MODEL=gemini-1.5-flash')
-        }
-        if (aiResult.error?.includes('API key')) {
-          throw new Error('กรุณาตั้งค่า Google AI Studio API Key\n\nรอบนี้ API Key ถูกตั้งค่าอัตโนมัติใน Environment Variables แล้ว\nหากยังขึ้น error นี้ให้ contact admin')
-        }
-        throw new Error(aiResult.error || 'เกิดข้อผิดพลาดในการประมวลผล')
+    // Set up progress callback
+    googleAI.setProgressCallback((progressData) => {
+      setProgress(progressData)
+    })
+
+    try {
+      let processingResult
+      
+      if (processingType === 'transcribe') {
+        processingResult = await googleAI.transcribeAudio(audioFile)
+      } else {
+        processingResult = await googleAI.summarizeAudio(audioFile)
       }
 
-      let processedResult = aiResult.data || ''
-      processedResult += `\n\n---\n📁 ไฟล์: ${uploadedFile.name}`
-      processedResult += `\n⚡ ประมวลผลด้วย Google AI Studio`
-      
-      setResult(processedResult)
-      
-    } catch (error) {
-      console.error('Processing error:', error)
-      const errorMessage = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ'
-      setError(errorMessage)
-      setResult('')
+      if (processingResult.success && processingResult.data) {
+        setResult(processingResult.data)
+      } else {
+        setError(processingResult.error || 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ')
+      }
+    } catch (err: any) {
+      setError(err.message || 'เกิดข้อผิดพลาดในการประมวลผล')
     } finally {
       setIsProcessing(false)
     }
   }
 
+  const handleReset = () => {
+    setAudioFile(null)
+    setResult(null)
+    setError(null)
+    setProgress(null)
+  }
+
   return (
-    <div className="app">
-      <header className="app-header">
-        <h1>🎵 Audio Summarizer</h1>
-        <p>อัปโหลดไฟล์เสียงเพื่อถอดข้อความหรือสรุปเนื้อหาด้วย Google AI</p>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-4xl mx-auto px-4 py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <span className="text-white text-xl">🎵</span>
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Audio Summarizer</h1>
+                <p className="text-sm text-gray-600">⚡ Enhanced Performance Mode</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-sm text-gray-500">ถอดเสียงและสรุปด้วย AI</div>
+              <div className="text-xs text-blue-600 font-medium">Multi-API Load Balancing</div>
+            </div>
+          </div>
+        </div>
       </header>
 
-      <main className="app-main">
-        <div className="container">
-          <AudioUploader 
-            onFileUpload={handleFileUpload}
-            uploadedFile={uploadedFile}
-          />
-
-          {uploadedFile && (
-            <ProcessingOptions
-              onTypeSelect={handleProcessingTypeSelect}
-              selectedType={processingType}
-              onProcess={handleProcess}
-              isProcessing={isProcessing}
+      {/* Main Content */}
+      <main className="max-w-4xl mx-auto px-4 py-8">
+        <div className="space-y-8">
+          {/* File Upload */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <AudioUploader 
+              onFileUpload={handleFileSelect} 
+              uploadedFile={audioFile}
             />
-          )}
+          </div>
 
-          <ProcessingProgress
-            step={progress.step}
-            progress={progress.progress}
-            details={progress.details}
-            logs={progress.logs}
-            isVisible={isProcessing || progress.step === 'Complete' || progress.step === 'Error'}
-          />
-
-          {error && (
-            <div className="error-message">
-              <h3>⚠️ เกิดข้อผิดพลาด</h3>
-              <p style={{whiteSpace: 'pre-line'}}>{error}</p>
+          {/* Processing Options */}
+          {audioFile && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <ProcessingOptions
+                selectedType={processingType}
+                onTypeChange={setProcessingType}
+                onProcess={handleProcess}
+                disabled={isProcessing}
+              />
             </div>
           )}
 
-          {result && !error && (
-            <ResultDisplay
-              result={result}
-              processingType={processingType}
-            />
+          {/* Progress */}
+          {isProcessing && progress && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <ProcessingProgress progress={progress} />
+            </div>
+          )}
+
+          {/* Results */}
+          {(result || error) && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <ResultDisplay
+                result={result}
+                error={error}
+                onReset={handleReset}
+                processingType={processingType}
+              />
+            </div>
           )}
         </div>
       </main>
+
+      {/* Performance Stats */}
+      <PerformanceStats
+        isVisible={showStats}
+        onToggle={() => setShowStats(!showStats)}
+      />
+
+      {/* Footer */}
+      <footer className="mt-16 bg-gray-50 border-t border-gray-200">
+        <div className="max-w-4xl mx-auto px-4 py-8">
+          <div className="text-center">
+            <div className="text-sm text-gray-600 mb-2">
+              🚀 Enhanced Performance Features
+            </div>
+            <div className="flex justify-center space-x-6 text-xs text-gray-500">
+              <span>⚡ Multi-API Load Balancing</span>
+              <span>🔄 Smart API Selection</span>
+              <span>📊 Parallel Processing</span>
+              <span>🎯 Auto Fallback</span>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }
