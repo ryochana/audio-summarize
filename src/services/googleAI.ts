@@ -2,6 +2,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 
 // Configuration
 const GOOGLE_AI_API_KEY = import.meta.env.VITE_GOOGLE_AI_API_KEY || ''
+const MODEL_VERSION = import.meta.env.VITE_AI_MODEL || 'gemini-1.5-pro' // เลือกได้ใน .env
 
 if (!GOOGLE_AI_API_KEY) {
   console.warn('Google AI API key is not configured. Please set VITE_GOOGLE_AI_API_KEY in your environment.')
@@ -24,7 +25,7 @@ export interface ProcessingProgress {
 }
 
 export class GoogleAIService {
-  private model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+  private model = genAI.getGenerativeModel({ model: MODEL_VERSION as any })
   private progressCallback?: (progress: ProcessingProgress) => void
   private currentLogs: string[] = []
 
