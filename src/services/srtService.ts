@@ -105,10 +105,17 @@ export class SRTService {
   }
 
   async generateSRT(audioFile: File, language: 'original' | 'thai' = 'original'): Promise<string> {
+    console.log(`🎬 [SRT] Starting SRT generation for ${audioFile.name}`)
+    console.log(`🎬 [SRT] File size: ${(audioFile.size / 1024 / 1024).toFixed(2)}MB, Language: ${language}`)
+    
     const selectedAI = this.getRandomAI()
     const model = selectedAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
     
+    console.log(`🎬 [SRT] Selected AI instance, using model: gemini-1.5-flash`)
+    
+    const startTime = Date.now()
     const base64Audio = await this.fileToBase64(audioFile)
+    console.log(`🎬 [SRT] File converted to base64 in ${Date.now() - startTime}ms`)
     
     let prompt: string
     
@@ -120,6 +127,7 @@ export class SRTService {
 4. ไม่ต้องใส่คำว่า "ส่วนที่" หรือหมายเลขส่วน
 5. ตัดประโยคยาวออกเป็นประโยคสั้นๆ
 6. ถ้ามีหลายคนพูดให้พยายามแยกคำพูดของแต่ละคน`
+      console.log(`🎬 [SRT] Using Thai translation prompt`)
     } else {
       prompt = `กรุณาถอดข้อความจากไฟล์เสียงนี้ โดย:
 1. ใช้ภาษาต้นฉบับที่ได้ยิน
@@ -128,8 +136,12 @@ export class SRTService {
 4. ไม่ต้องใส่คำว่า "ส่วนที่" หรือหมายเลขส่วน
 5. ตัดประโยคยาวออกเป็นประโยคสั้นๆ
 6. ถ้ามีหลายคนพูดให้พยายามแยกคำพูดของแต่ละคน`
+      console.log(`🎬 [SRT] Using original language prompt`)
     }
 
+    console.log(`🎬 [SRT] Sending request to AI...`)
+    const aiStartTime = Date.now()
+    
     const result = await model.generateContent([
       prompt,
       {
@@ -140,25 +152,45 @@ export class SRTService {
       }
     ])
 
+    const aiProcessingTime = Date.now() - aiStartTime
+    console.log(`🎬 [SRT] AI processing completed in ${aiProcessingTime}ms`)
+
     const transcription = result.response.text()
+    console.log(`🎬 [SRT] Transcription received: ${transcription.length} characters`)
     
     // Check for error responses
     if (transcription.includes('ไม่สามารถสรุปไฟล์เสียงได้') || 
         transcription.includes('ไม่มีความสามารถในการประมวลผลเสียง')) {
+      console.error(`🎬 [SRT] Error: AI cannot process audio file`)
       throw new Error('ไม่สามารถประมวลผลไฟล์เสียงเป็นซับไตเติ้ลได้')
     }
 
-    return this.parseTranscriptionToSRT(transcription)
+    console.log(`🎬 [SRT] Converting transcription to SRT format...`)
+    const srtStartTime = Date.now()
+    const srtContent = this.parseTranscriptionToSRT(transcription)
+    const srtProcessingTime = Date.now() - srtStartTime
+    
+    const subtitleCount = srtContent.split('\n\n').filter(s => s.trim()).length
+    console.log(`🎬 [SRT] SRT conversion completed in ${srtProcessingTime}ms`)
+    console.log(`🎬 [SRT] Generated ${subtitleCount} subtitle entries`)
+    console.log(`🎬 [SRT] Total processing time: ${Date.now() - startTime}ms`)
+
+    return srtContent
   }
 
   downloadSRT(srtContent: string, filename: string) {
+    console.log(`💾 [SRTService] Downloading SRT file: ${filename}.srt`)
+    console.log(`💾 [SRTService] Content length: ${srtContent.length} characters`)
+    
     const element = document.createElement('a')
-    const file = new Blob([srtContent], { type: 'text/srt' })
+    const file = new Blob([srtContent], { type: 'application/x-subrip' })
     element.href = URL.createObjectURL(file)
-    element.download = `${filename}_${new Date().getTime()}.srt`
+    element.download = `${filename}.srt`  // Remove timestamp for cleaner filename
     document.body.appendChild(element)
     element.click()
     document.body.removeChild(element)
+    
+    console.log(`💾 [SRTService] SRT file download initiated successfully`)
   }
 }
 

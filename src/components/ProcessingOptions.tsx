@@ -21,7 +21,10 @@ const ProcessingOptions: React.FC<ProcessingOptionsProps> = ({
       <div className="option-cards">
         <div 
           className={`option-card ${selectedType === 'transcribe' ? 'selected' : ''}`}
-          onClick={() => onTypeSelect('transcribe')}
+          onClick={() => {
+            console.log('🎯 [ProcessingOptions] User selected: transcribe')
+            onTypeSelect('transcribe')
+          }}
         >
           <div className="option-icon">📝</div>
           <h3>ถอดข้อความ</h3>
@@ -35,7 +38,10 @@ const ProcessingOptions: React.FC<ProcessingOptionsProps> = ({
 
         <div 
           className={`option-card ${selectedType === 'summarize' ? 'selected' : ''}`}
-          onClick={() => onTypeSelect('summarize')}
+          onClick={() => {
+            console.log('🎯 [ProcessingOptions] User selected: summarize')
+            onTypeSelect('summarize')
+          }}
         >
           <div className="option-icon">📋</div>
           <h3>สรุปโดยละเอียด</h3>
@@ -52,7 +58,11 @@ const ProcessingOptions: React.FC<ProcessingOptionsProps> = ({
         <div className="process-section">
           <button 
             className="process-button"
-            onClick={onProcess}
+            onClick={() => {
+              console.log(`🚀 [ProcessingOptions] Starting ${selectedType} processing`)
+              console.log(`🚀 [ProcessingOptions] Button clicked at: ${new Date().toLocaleString('th-TH')}`)
+              onProcess()
+            }}
             disabled={isProcessing}
           >
             {isProcessing ? (

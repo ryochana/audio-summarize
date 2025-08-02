@@ -53,6 +53,8 @@ export interface ProcessingProgress {
   progress: number
   details: string
   logs: string[]
+  percentage?: number  // สำหรับ logging compatibility
+  message?: string     // สำหรับ logging compatibility
 }
 
 export class GoogleAIService {
@@ -320,19 +322,25 @@ export class GoogleAIService {
 
   private updateProgress(step: string, progress: number, details: string, log?: string) {
     if (log) {
-      this.currentLogs.push(`${new Date().toLocaleTimeString()} - ${log}`)
-      // Keep only last 20 logs
-      if (this.currentLogs.length > 20) {
-        this.currentLogs = this.currentLogs.slice(-20)
+      const timestamp = new Date().toLocaleTimeString('th-TH')
+      this.currentLogs.push(`${timestamp} - ${log}`)
+      // Keep only last 50 logs for better performance
+      if (this.currentLogs.length > 50) {
+        this.currentLogs = this.currentLogs.slice(-50)
       }
     }
+    
+    // Always log to console for debugging
+    console.log(`[${step}] ${progress}% - ${details}`, log ? `| ${log}` : '')
     
     if (this.progressCallback) {
       this.progressCallback({ 
         step, 
         progress, 
         details, 
-        logs: [...this.currentLogs] 
+        logs: [...this.currentLogs],
+        percentage: progress,  // สำหรับ logging compatibility
+        message: details       // สำหรับ logging compatibility
       })
     }
   }
@@ -384,31 +392,41 @@ export class GoogleAIService {
     const startTime = Date.now()
     
     try {
+      this.updateProgress('Starting', 0, 'เริ่มต้นการถอดข้อความ...', 
+        `🎵 File: ${audioFile.name}, Size: ${(audioFile.size / 1024 / 1024).toFixed(2)}MB, Type: ${audioFile.type}`)
+      
       this.updateProgress('Validating', 5, 'ตรวจสอบไฟล์เสียง...', 
-        `🎵 File: ${audioFile.name} (${(audioFile.size / 1024 / 1024).toFixed(2)}MB)`)
+        `🔍 Validating audio format and size`)
       
       if (!audioFile.type.startsWith('audio/')) {
         throw new Error('กรุณาอัพโหลดไฟล์เสียงเท่านั้น')
       }
 
       this.updateProgress('Preparing', 15, 'เตรียมการประมวลผล...', 
-        `📋 Type: ${audioFile.type}, Size: ${audioFile.size} bytes`)
+        `📋 Available APIs: ${API_KEYS.length}, Selected model: ${MODEL_VERSION}`)
+
+      // Log API health status
+      const healthyApis = apiStats.filter(stats => stats.isHealthy).length
+      this.updateProgress('Preparing', 20, 'ตรวจสอบสถานะ API...', 
+        `💚 Healthy APIs: ${healthyApis}/${API_KEYS.length}`)
 
       await this.simulateDetailedProgress('transcribe')
       
       const result = await this.callAI(audioFile, 'transcribe')
       
+      const processingTime = Date.now() - startTime
       this.updateProgress('Completed', 100, 'ถอดข้อความเสร็จสิ้น!', 
-        `🎉 Transcription completed in ${Date.now() - startTime}ms`)
+        `🎉 Transcription completed in ${processingTime}ms, Result length: ${result.length} characters`)
 
       return {
         success: true,
         data: result,
-        processingTime: Date.now() - startTime
+        processingTime: processingTime
       }
     } catch (error: any) {
+      const processingTime = Date.now() - startTime
       this.updateProgress('Error', 0, 'เกิดข้อผิดพลาด', 
-        `❌ Error: ${error.message}`)
+        `❌ Error after ${processingTime}ms: ${error.message}`)
       
       return {
         success: false,
@@ -421,31 +439,41 @@ export class GoogleAIService {
     const startTime = Date.now()
     
     try {
+      this.updateProgress('Starting', 0, 'เริ่มต้นการสรุปเนื้อหา...', 
+        `🎵 File: ${audioFile.name}, Size: ${(audioFile.size / 1024 / 1024).toFixed(2)}MB, Type: ${audioFile.type}`)
+      
       this.updateProgress('Validating', 5, 'ตรวจสอบไฟล์เสียง...', 
-        `🎵 File: ${audioFile.name} (${(audioFile.size / 1024 / 1024).toFixed(2)}MB)`)
+        `🔍 Validating audio format and size`)
       
       if (!audioFile.type.startsWith('audio/')) {
         throw new Error('กรุณาอัพโหลดไฟล์เสียงเท่านั้น')
       }
 
       this.updateProgress('Preparing', 15, 'เตรียมการประมวลผล...', 
-        `📋 Type: ${audioFile.type}, Size: ${audioFile.size} bytes`)
+        `📋 Available APIs: ${API_KEYS.length}, Selected model: ${MODEL_VERSION}`)
+
+      // Log API health status
+      const healthyApis = apiStats.filter(stats => stats.isHealthy).length
+      this.updateProgress('Preparing', 20, 'ตรวจสอบสถานะ API...', 
+        `💚 Healthy APIs: ${healthyApis}/${API_KEYS.length}`)
 
       await this.simulateDetailedProgress('summarize')
       
       const result = await this.callAI(audioFile, 'summarize')
       
+      const processingTime = Date.now() - startTime
       this.updateProgress('Completed', 100, 'สรุปเนื้อหาเสร็จสิ้น!', 
-        `🎉 Summary completed in ${Date.now() - startTime}ms`)
+        `🎉 Summary completed in ${processingTime}ms, Result length: ${result.length} characters`)
 
       return {
         success: true,
         data: result,
-        processingTime: Date.now() - startTime
+        processingTime: processingTime
       }
     } catch (error: any) {
+      const processingTime = Date.now() - startTime
       this.updateProgress('Error', 0, 'เกิดข้อผิดพลาด', 
-        `❌ Error: ${error.message}`)
+        `❌ Error after ${processingTime}ms: ${error.message}`)
       
       return {
         success: false,

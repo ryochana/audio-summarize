@@ -17,9 +17,14 @@ const SRTOptions: React.FC<SRTOptionsProps> = ({
   const [srtLanguage, setSrtLanguage] = useState<'original' | 'thai'>('original')
 
   const handleProcess = () => {
+    console.log(`🎬 [SRTOptions] handleProcess called`)
+    console.log(`🎬 [SRTOptions] selectedType: ${selectedType}`)
+    
     if (selectedType === 'srt') {
+      console.log(`🎬 [SRTOptions] Processing SRT with language: ${srtLanguage}`)
       onProcess(srtLanguage)
     } else {
+      console.log(`🎬 [SRTOptions] Processing ${selectedType}`)
       onProcess()
     }
   }
@@ -31,7 +36,10 @@ const SRTOptions: React.FC<SRTOptionsProps> = ({
       <div className="option-grid">
         <button
           className={`option-card ${selectedType === 'transcribe' ? 'selected' : ''}`}
-          onClick={() => onTypeSelect('transcribe')}
+          onClick={() => {
+            console.log('🎯 [SRTOptions] User selected: transcribe')
+            onTypeSelect('transcribe')
+          }}
           disabled={isProcessing}
         >
           <div className="option-icon">📝</div>
@@ -41,7 +49,10 @@ const SRTOptions: React.FC<SRTOptionsProps> = ({
 
         <button
           className={`option-card ${selectedType === 'summarize' ? 'selected' : ''}`}
-          onClick={() => onTypeSelect('summarize')}
+          onClick={() => {
+            console.log('🎯 [SRTOptions] User selected: summarize')
+            onTypeSelect('summarize')
+          }}
           disabled={isProcessing}
         >
           <div className="option-icon">📋</div>
@@ -51,7 +62,10 @@ const SRTOptions: React.FC<SRTOptionsProps> = ({
 
         <button
           className={`option-card ${selectedType === 'srt' ? 'selected' : ''}`}
-          onClick={() => onTypeSelect('srt')}
+          onClick={() => {
+            console.log('🎯 [SRTOptions] User selected: srt')
+            onTypeSelect('srt')
+          }}
           disabled={isProcessing}
         >
           <div className="option-icon">🎬</div>
@@ -67,14 +81,20 @@ const SRTOptions: React.FC<SRTOptionsProps> = ({
           <div className="language-buttons">
             <button
               className={`language-btn ${srtLanguage === 'original' ? 'selected' : ''}`}
-              onClick={() => setSrtLanguage('original')}
+              onClick={() => {
+                console.log('🌐 [SRTOptions] SRT language selected: original')
+                setSrtLanguage('original')
+              }}
               disabled={isProcessing}
             >
               🌐 ภาษาต้นฉบับ
             </button>
             <button
               className={`language-btn ${srtLanguage === 'thai' ? 'selected' : ''}`}
-              onClick={() => setSrtLanguage('thai')}
+              onClick={() => {
+                console.log('🇹🇭 [SRTOptions] SRT language selected: thai')
+                setSrtLanguage('thai')
+              }}
               disabled={isProcessing}
             >
               🇹🇭 แปลเป็นไทย
@@ -83,26 +103,17 @@ const SRTOptions: React.FC<SRTOptionsProps> = ({
         </div>
       )}
 
+      {/* Auto-Process Mode - No manual button needed */}
       {selectedType && (
         <div className="process-section">
-          <button
-            className="process-button"
-            onClick={handleProcess}
-            disabled={isProcessing}
-          >
-            {isProcessing ? (
-              <>
-                <span className="loading-spinner"></span>
-                กำลังประมวลผล...
-              </>
-            ) : (
-              <>
-                {selectedType === 'transcribe' && '📝 เริ่มถอดข้อความ'}
-                {selectedType === 'summarize' && '📋 เริ่มสรุปเนื้อหา'}
-                {selectedType === 'srt' && `🎬 สร้างซับ ${srtLanguage === 'thai' ? '(แปลไทย)' : '(ภาษาต้นฉบับ)'}`}
-              </>
-            )}
-          </button>
+          <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <div className="text-blue-700 font-medium mb-1">
+              🚀 โหมดประมวlผลอัตโนมัติ
+            </div>
+            <div className="text-sm text-blue-600">
+              อัปโหลดไฟล์เสียงแล้วจะเริ่มประมวลผลทันที
+            </div>
+          </div>
         </div>
       )}
     </div>

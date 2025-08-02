@@ -75,9 +75,10 @@ const AudioUploader: React.FC<AudioUploaderProps> = ({ onFileUpload, uploadedFil
         ) : (
           <div className="upload-prompt">
             <div className="upload-icon">📁</div>
-            <h2>เลือกไฟล์เสียงหรือลากไฟล์มาวางที่นี่</h2>
+            <h2>🚀 เลือกไฟล์เสียงแล้วประมวลผลทันที</h2>
             <p>รองรับไฟล์: MP3, WAV, M4A, AAC, FLAC, OGG, WMA, AMR, 3GP</p>
-            <button className="upload-button">เลือกไฟล์</button>
+            <p className="text-sm text-blue-600 mt-2">💡 ไม่ต้องกดปุ่ม - อัปโหลดแล้วเริ่มทำ SRT ทันที!</p>
+            <button className="upload-button">เลือกไฟล์เสียง</button>
           </div>
         )}
       </div>
